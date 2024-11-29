@@ -18,7 +18,7 @@ const app = initializeApp(firebaseConfig);
 export default function App() {
   return (
     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text style={{ fontSize: 20, color: "green" }}>Firebase is working!</Text>
+      <Text style={{ fontSize: 20, color: "green" }}>Firebase is working right now!</Text>
     </View>
   );
 }
