@@ -1,43 +1,66 @@
-import React, { useEffect } from "react";
-import { View, Text, StyleSheet } from "react-native";
-import { useNavigation } from "@react-navigation/native";
-import { getAuth } from "firebase/auth";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import React, { useState } from "react";
+import { View, TextInput, Button, StyleSheet, Text } from "react-native";
+import { getFirestore, doc, setDoc } from "firebase/firestore";
 
 const AddGuideScreen = () => {
-  const auth = getAuth();
   const db = getFirestore();
-  const navigation = useNavigation();
+  const [docName, setDocName] = useState("");
+  const [type, setType] = useState("");
+  const [ageRange, setAgeRange] = useState("");
+  const [minValue, setMinValue] = useState("");
+  const [maxValue, setMaxValue] = useState("");
 
-  useEffect(() => {
-    const checkAdmin = async () => {
-      const user = auth.currentUser;
-      if (user) {
-        const userDocRef = doc(db, "Users", user.uid); // Kullanıcının Firestore'daki UID'si ile dokümanını al
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          if (userData.role !== "admin") {
-            // Kullanıcı admin değilse
-            navigation.navigate("Unauthorized"); // Admin değilse yetkisiz ekranına yönlendir
-          }
-        } else {
-          console.error("Kullanıcı bilgileri Firestore'da bulunamadı!");
-          navigation.navigate("Unauthorized");
-        }
-      } else {
-        navigation.navigate("Login"); // Kullanıcı oturum açmamışsa giriş ekranına yönlendir
-      }
-    };
-
-    checkAdmin();
-  }, []);
+  const handleAddGuide = async () => {
+    try {
+      await setDoc(doc(db, "Guides", docName), {
+        type,
+        ageRange,
+        minValue: parseFloat(minValue), // Sayı olarak kaydedilir
+        maxValue: parseFloat(maxValue),
+      });
+      alert("Guide added successfully!");
+    } catch (error) {
+      console.error("Error adding guide:", error.message);
+      alert("Failed to add guide.");
+    }
+  };
 
   return (
     <View style={styles.container}>
-      <Text style={styles.text}>Welcome to Add Guide Screen! (Admin Only)</Text>
-      {/* Burada rehber ekleme formu veya işlevselliklerini ekleyebilirsiniz */}
+      <Text style={styles.title}>Add Guide (Admin Only)</Text>
+      <TextInput
+        placeholder="Document Name"
+        value={docName}
+        onChangeText={setDocName}
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="Type (e.g., IgM, IgG)"
+        value={type}
+        onChangeText={setType}
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="Age Range (e.g., 2-3)"
+        value={ageRange}
+        onChangeText={setAgeRange}
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="Min Value"
+        value={minValue}
+        onChangeText={setMinValue}
+        style={styles.input}
+        keyboardType="numeric"
+      />
+      <TextInput
+        placeholder="Max Value"
+        value={maxValue}
+        onChangeText={setMaxValue}
+        style={styles.input}
+        keyboardType="numeric"
+      />
+      <Button title="Add Guide" onPress={handleAddGuide} />
     </View>
   );
 };
@@ -45,12 +68,21 @@ const AddGuideScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
+    padding: 20,
+    backgroundColor: "#fff",
   },
-  text: {
-    fontSize: 20,
+  title: {
+    fontSize: 18,
     fontWeight: "bold",
+    marginBottom: 20,
+    textAlign: "center",
+  },
+  input: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 10,
+    marginBottom: 10,
+    borderRadius: 5,
   },
 });
 

@@ -5,7 +5,8 @@ import { View, Text, TextInput, Button, StyleSheet } from "react-native";
 import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
-import AddGuideScreen from "./screens/AddGuideScreen"; // AddGuideScreen'i import ettik
+import AddGuideScreen from "./screens/AddGuideScreen";
+import AddResultScreen from "./screens/AddResultScreen";
 
 // Firebase yapılandırması
 const firebaseConfig = {
@@ -18,14 +19,15 @@ const firebaseConfig = {
   measurementId: "G-RNXNZR2GVF",
 };
 
-// Firebase'i başlat
+// Firebase başlatma
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// Stack Navigator tanımı
 const Stack = createStackNavigator();
 
-// Login Ekranı
+// Giriş Ekranı
 function LoginScreen({ navigation, setRole, setUser }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,23 +36,31 @@ function LoginScreen({ navigation, setRole, setUser }) {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const loggedInUser = userCredential.user;
-
-      // Kullanıcıyı state'e ekleyin
       setUser(loggedInUser);
-
+  
       // Kullanıcı rolünü Firestore'dan alın
       const userDocRef = doc(db, "Users", loggedInUser.uid);
       const userDoc = await getDoc(userDocRef);
-
+  
       if (userDoc.exists()) {
         const role = userDoc.data().role;
         setRole(role);
-
-        // Kullanıcı rolüne göre yönlendirme
+  
+        // Rol bazlı yönlendirme
         if (role === "admin") {
-          navigation.navigate("AdminHome");
+          setTimeout(() => {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "AdminHome" }],
+            });
+          }, 0); // State'in tamamen güncellenmesini beklemek için timeout kullanıyoruz
         } else if (role === "user") {
-          navigation.navigate("UserHome");
+          setTimeout(() => {
+            navigation.reset({
+              index: 0,
+              routes: [{ name: "UserHome" }],
+            });
+          }, 0);
         }
       } else {
         console.error("Kullanıcı bilgileri Firestore'da bulunamadı!");
@@ -59,7 +69,7 @@ function LoginScreen({ navigation, setRole, setUser }) {
       console.error("Giriş hatası:", error.message);
     }
   };
-
+  
   return (
     <View style={styles.container}>
       <TextInput
@@ -86,6 +96,7 @@ function AdminHome({ navigation }) {
     <View style={styles.container}>
       <Text style={styles.adminText}>Welcome, Admin!</Text>
       <Button title="Add Guide" onPress={() => navigation.navigate("AddGuide")} />
+      <Button title="Add Result" onPress={() => navigation.navigate("AddResult")} />
     </View>
   );
 }
@@ -107,20 +118,21 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        {/* Login ekranı */}
+        {/* Giriş ekranı */}
         <Stack.Screen name="Login">
           {(props) => <LoginScreen {...props} setRole={setRole} setUser={setUser} />}
         </Stack.Screen>
 
-        {/* Admin ana ekranı */}
+        {/* Admin ekranları */}
         {role === "admin" && (
           <>
             <Stack.Screen name="AdminHome" component={AdminHome} />
             <Stack.Screen name="AddGuide" component={AddGuideScreen} />
+            <Stack.Screen name="AddResult" component={AddResultScreen} />
           </>
         )}
 
-        {/* Kullanıcı ana ekranı */}
+        {/* Kullanıcı ekranları */}
         {role === "user" && <Stack.Screen name="UserHome" component={UserHome} />}
       </Stack.Navigator>
     </NavigationContainer>
