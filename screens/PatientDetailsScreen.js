@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, FlatList } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, StyleSheet, ScrollView } from "react-native";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 const PatientDetailsScreen = ({ route }) => {
-  const { userId, name } = route.params; // userId ve hastanın adı, navigasyondan geliyor
+  const { userId, name } = route.params;
   const db = getFirestore();
   const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(true);
+
+  const keyOrder = ["IgA", "IgM", "IgG", "IgG1", "IgG2", "IgG3", "IgG4"]; // Sabit sıralama
 
   useEffect(() => {
     const fetchResults = async () => {
@@ -16,57 +17,73 @@ const PatientDetailsScreen = ({ route }) => {
 
         if (docSnap.exists()) {
           const data = docSnap.data();
-          const sortedResults = Object.entries(data).sort(([keyA], [keyB]) =>
-            keyA.localeCompare(keyB)
-          ); // Tarihe göre sıralama
+          const sortedResults = Object.keys(data)
+            .filter((key) => key !== "name")
+            .map((date) => ({ date, values: data[date] }))
+            .sort((a, b) => new Date(b.date) - new Date(a.date)); // Tarihe göre sıralama
+
           setResults(sortedResults);
-        } else {
-          console.error("No such document!");
         }
       } catch (error) {
-        console.error("Error fetching patient results:", error.message);
-      } finally {
-        setLoading(false);
+        console.error("Error fetching results:", error.message);
       }
     };
 
     fetchResults();
   }, [userId]);
 
-  if (loading) {
-    return (
-      <View style={styles.container}>
-        <Text>Loading...</Text>
-      </View>
-    );
-  }
+  const compareValues = (current, previous) => {
+    if (current > previous) return { symbol: "↑", color: "green", background: "#e6ffe6" };
+    if (current < previous) return { symbol: "↓", color: "red", background: "#ffe6e6" };
+    return { symbol: "→", color: "gray", background: "#f2f2f2" };
+  };
 
   return (
-    <View style={styles.container}>
+    <ScrollView style={styles.container}>
       <Text style={styles.header}>Results for {name}</Text>
-      <FlatList
-        data={results}
-        keyExtractor={(item, index) => index.toString()}
-        renderItem={({ item }) => (
-          <View style={styles.resultItem}>
-            <Text style={styles.date}>{item[0]}</Text>
-            {Object.entries(item[1]).map(([test, value]) => (
-              <Text key={test}>
-                {test}: {value}
-              </Text>
-            ))}
+      {results.map((result, index) => {
+        const comparison =
+          index < results.length - 1
+            ? keyOrder.map((key) => {
+                const prevValue = results[index + 1]?.values[key] || 0;
+                const currentValue = result.values[key] || 0;
+                return { key, ...compareValues(currentValue, prevValue), value: currentValue };
+              })
+            : null;
+
+        return (
+          <View key={result.date} style={styles.resultContainer}>
+            <Text style={styles.date}>{result.date}</Text>
+            {comparison
+              ? comparison.map(({ key, symbol, color, background, value }) => (
+                  <View
+                    key={key}
+                    style={[styles.resultRow, { backgroundColor: background }]}
+                  >
+                    <Text style={styles.resultText}>
+                      {key}: {value}
+                    </Text>
+                    <Text style={[styles.arrow, { color }]}>{symbol}</Text>
+                  </View>
+                ))
+              : keyOrder.map((key) => (
+                  <View key={key} style={styles.resultRow}>
+                    <Text style={styles.resultText}>
+                      {key}: {result.values[key] || 0}
+                    </Text>
+                  </View>
+                ))}
           </View>
-        )}
-      />
-    </View>
+        );
+      })}
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: 20,
-    backgroundColor: "#fff",
   },
   header: {
     fontSize: 24,
@@ -74,17 +91,31 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     textAlign: "center",
   },
-  resultItem: {
-    marginBottom: 15,
+  resultContainer: {
+    marginBottom: 20,
     padding: 10,
     borderWidth: 1,
     borderColor: "#ccc",
-    borderRadius: 5,
+    borderRadius: 10,
   },
   date: {
     fontSize: 18,
     fontWeight: "bold",
-    marginBottom: 5,
+    marginBottom: 10,
+  },
+  resultRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: 5,
+    borderRadius: 5,
+  },
+  resultText: {
+    fontSize: 16,
+  },
+  arrow: {
+    fontSize: 24,
+    fontWeight: "bold",
   },
 });
 
