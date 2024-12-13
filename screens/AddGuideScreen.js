@@ -1,24 +1,37 @@
 import React, { useState } from "react";
 import { View, TextInput, Button, StyleSheet, Text } from "react-native";
-import { getFirestore, doc, setDoc } from "firebase/firestore";
+import { getFirestore, doc, updateDoc, setDoc } from "firebase/firestore";
 
 const AddGuideScreen = () => {
   const db = getFirestore();
-  const [docName, setDocName] = useState("");
-  const [type, setType] = useState("");
-  const [ageRange, setAgeRange] = useState("");
-  const [minValue, setMinValue] = useState("");
-  const [maxValue, setMaxValue] = useState("");
+
+  const [guideName, setGuideName] = useState(""); // Kılavuz adı
+  const [ageRange, setAgeRange] = useState(""); // Yaş aralığı
+  const [testType, setTestType] = useState(""); // Test türü (IgM, IgG, vb.)
+  const [minValue, setMinValue] = useState(""); // Minimum değer
+  const [maxValue, setMaxValue] = useState(""); // Maksimum değer
 
   const handleAddGuide = async () => {
     try {
-      await setDoc(doc(db, "Guides", docName), {
-        type,
-        ageRange,
-        minValue: parseFloat(minValue), // Sayı olarak kaydedilir
-        maxValue: parseFloat(maxValue),
-      });
+      // Guides koleksiyonunda guideName dokümanını oluştur veya güncelle
+      const guideDocRef = doc(db, "Guides", guideName);
+
+      // Güncelleme için JSON yapısı
+      const ageGroupData = {
+        [ageRange]: {
+          [testType]: [parseFloat(minValue), parseFloat(maxValue)],
+        },
+      };
+
+      // Firestore dokümanını güncelle
+      await setDoc(guideDocRef, ageGroupData, { merge: true });
+
       alert("Guide added successfully!");
+      // Alanları temizle
+      setAgeRange("");
+      setTestType("");
+      setMinValue("");
+      setMaxValue("");
     } catch (error) {
       console.error("Error adding guide:", error.message);
       alert("Failed to add guide.");
@@ -29,21 +42,21 @@ const AddGuideScreen = () => {
     <View style={styles.container}>
       <Text style={styles.title}>Add Guide (Admin Only)</Text>
       <TextInput
-        placeholder="Document Name"
-        value={docName}
-        onChangeText={setDocName}
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="Type (e.g., IgM, IgG)"
-        value={type}
-        onChangeText={setType}
+        placeholder="Guide Name (e.g., Default Guide)"
+        value={guideName}
+        onChangeText={setGuideName}
         style={styles.input}
       />
       <TextInput
         placeholder="Age Range (e.g., 2-3)"
         value={ageRange}
         onChangeText={setAgeRange}
+        style={styles.input}
+      />
+      <TextInput
+        placeholder="Test Type (e.g., IgM, IgG)"
+        value={testType}
+        onChangeText={setTestType}
         style={styles.input}
       />
       <TextInput
