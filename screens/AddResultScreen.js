@@ -1,58 +1,87 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet } from "react-native";
-import { getFirestore, collection, addDoc } from "firebase/firestore";
+import { View, Text, TextInput, Button, StyleSheet, ScrollView } from "react-native";
+import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
 
 const AddResultScreen = () => {
   const db = getFirestore();
-  const [userId, setUserId] = useState("");
-  const [testName, setTestName] = useState("");
-  const [resultValue, setResultValue] = useState("");
-  const [date, setDate] = useState("");
-  const [referenceRange, setReferenceRange] = useState("");
+  const [userId, setUserId] = useState(""); // Hastanın UID'si
+  const [date, setDate] = useState(""); // YYYY-MM-DD
+  const [results, setResults] = useState({
+    IgA: "",
+    IgM: "",
+    IgG: "",
+    IgG1: "",
+    IgG2: "",
+    IgG3: "",
+    IgG4: "",
+  });
 
   const handleAddResult = async () => {
     try {
-      const status =
-        resultValue < referenceRange[0]
-          ? "Low"
-          : resultValue > referenceRange[1]
-          ? "High"
-          : "Normal";
+      if (!userId || !date) {
+        alert("User ID and Date are required!");
+        return;
+      }
 
-      await addDoc(collection(db, "Results"), {
-        userId,
-        testName,
-        resultValue: parseFloat(resultValue),
-        date,
-        referenceRange: referenceRange.split("-").map(Number),
-        status,
-      });
+      const docRef = doc(db, "Results", userId);
+      const docSnapshot = await getDoc(docRef);
+
+      // Eğer doküman yoksa oluştur
+      if (!docSnapshot.exists()) {
+        await setDoc(docRef, {
+          [date]: {
+            IgA: parseFloat(results.IgA),
+            IgM: parseFloat(results.IgM),
+            IgG: parseFloat(results.IgG),
+            IgG1: parseFloat(results.IgG1),
+            IgG2: parseFloat(results.IgG2),
+            IgG3: parseFloat(results.IgG3),
+            IgG4: parseFloat(results.IgG4),
+          },
+        });
+      } else {
+        // Doküman varsa, mevcut dokümana yeni sonuçları ekle
+        const existingData = docSnapshot.data();
+        await setDoc(docRef, {
+          ...existingData,
+          [date]: {
+            IgA: parseFloat(results.IgA),
+            IgM: parseFloat(results.IgM),
+            IgG: parseFloat(results.IgG),
+            IgG1: parseFloat(results.IgG1),
+            IgG2: parseFloat(results.IgG2),
+            IgG3: parseFloat(results.IgG3),
+            IgG4: parseFloat(results.IgG4),
+          },
+        });
+      }
 
       alert("Result added successfully!");
+      // Formu sıfırla
+      setUserId("");
+      setDate("");
+      setResults({
+        IgA: "",
+        IgM: "",
+        IgG: "",
+        IgG1: "",
+        IgG2: "",
+        IgG3: "",
+        IgG4: "",
+      });
     } catch (error) {
       console.error("Error adding result: ", error.message);
+      alert("Failed to add result.");
     }
   };
 
   return (
-    <View style={styles.container}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.header}>Add Result (Admin Only)</Text>
       <TextInput
-        placeholder="User ID"
+        placeholder="User ID (Document ID)"
         value={userId}
         onChangeText={setUserId}
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="Test Name (e.g., IgG)"
-        value={testName}
-        onChangeText={setTestName}
-        style={styles.input}
-      />
-      <TextInput
-        placeholder="Result Value"
-        value={resultValue}
-        onChangeText={setResultValue}
         style={styles.input}
       />
       <TextInput
@@ -61,20 +90,25 @@ const AddResultScreen = () => {
         onChangeText={setDate}
         style={styles.input}
       />
-      <TextInput
-        placeholder="Reference Range (e.g., 7-16)"
-        value={referenceRange}
-        onChangeText={setReferenceRange}
-        style={styles.input}
-      />
+      <Text style={styles.subHeader}>Enter Test Results:</Text>
+      {Object.keys(results).map((key) => (
+        <TextInput
+          key={key}
+          placeholder={key}
+          value={results[key]}
+          onChangeText={(value) => setResults({ ...results, [key]: value })}
+          style={styles.input}
+          keyboardType="numeric"
+        />
+      ))}
       <Button title="Add Result" onPress={handleAddResult} />
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
+    flexGrow: 1,
     padding: 20,
     justifyContent: "center",
     alignItems: "center",
@@ -83,6 +117,11 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: "bold",
     marginBottom: 20,
+  },
+  subHeader: {
+    fontSize: 18,
+    fontWeight: "bold",
+    marginVertical: 10,
   },
   input: {
     borderWidth: 1,

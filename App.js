@@ -1,14 +1,18 @@
 import React, { useState } from "react";
+import { View, Text, TextInput, Button, StyleSheet } from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
-import { View, Text, TextInput, Button, StyleSheet } from "react-native";
-import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
+
+// Diğer ekranlar
+import AdminViewPatientsScreen from "./screens/AdminViewPatientsScreen";
 import AddGuideScreen from "./screens/AddGuideScreen";
 import AddResultScreen from "./screens/AddResultScreen";
+import PatientDetailsScreen from "./screens/PatientDetailsScreen";
 
 // Firebase yapılandırması
+import { initializeApp } from "firebase/app";
 const firebaseConfig = {
   apiKey: "AIzaSyCY4YWyZfitmebC_p61n72bp4rToODcGYI",
   authDomain: "e-laboratory-mobile-project.firebaseapp.com",
@@ -18,62 +22,56 @@ const firebaseConfig = {
   appId: "1:632177386698:web:14e06884b766e52c9cc033",
   measurementId: "G-RNXNZR2GVF",
 };
+initializeApp(firebaseConfig);
 
-// Firebase başlatma
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// Stack Navigator tanımı
 const Stack = createStackNavigator();
+const auth = getAuth();
+const db = getFirestore();
 
-// Giriş Ekranı
-function LoginScreen({ navigation, setRole, setUser }) {
+const LoginScreen = ({ navigation, setRole }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
+    if (isLoading) return; // Çift tıklamayı önlemek için kontrol
+    setIsLoading(true); // Tıklama sırasında tekrar giriş yapılmasını engellemek için
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const loggedInUser = userCredential.user;
-      setUser(loggedInUser);
-  
-      // Kullanıcı rolünü Firestore'dan alın
-      const userDocRef = doc(db, "Users", loggedInUser.uid);
+      const user = userCredential.user;
+
+      const userDocRef = doc(db, "Users", user.uid);
       const userDoc = await getDoc(userDocRef);
-  
+
       if (userDoc.exists()) {
         const role = userDoc.data().role;
         setRole(role);
-  
-        // Rol bazlı yönlendirme
+
         if (role === "admin") {
-          setTimeout(() => {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "AdminHome" }],
-            });
-          }, 0); // State'in tamamen güncellenmesini beklemek için timeout kullanıyoruz
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "AdminHome" }],
+          });
         } else if (role === "user") {
-          setTimeout(() => {
-            navigation.reset({
-              index: 0,
-              routes: [{ name: "UserHome" }],
-            });
-          }, 0);
+          navigation.reset({
+            index: 0,
+            routes: [{ name: "UserHome" }],
+          });
         }
       } else {
-        console.error("Kullanıcı bilgileri Firestore'da bulunamadı!");
+        alert("User data not found in Firestore.");
       }
     } catch (error) {
-      console.error("Giriş hatası:", error.message);
+      alert("Login failed: " + error.message);
+    } finally {
+      setIsLoading(false); // İşlem tamamlandı
     }
   };
-  
+
   return (
     <View style={styles.container}>
       <TextInput
-        placeholder="E-mail"
+        placeholder="Email"
         value={email}
         onChangeText={setEmail}
         style={styles.input}
@@ -85,61 +83,54 @@ function LoginScreen({ navigation, setRole, setUser }) {
         secureTextEntry
         style={styles.input}
       />
-      <Button title="Login" onPress={handleLogin} />
+      <Button title={isLoading ? "Logging in..." : "Login"} onPress={handleLogin} disabled={isLoading} />
     </View>
   );
-}
+};
 
-// Admin Ana Sayfası
-function AdminHome({ navigation }) {
+const AdminHome = ({ navigation }) => {
   return (
     <View style={styles.container}>
-      <Text style={styles.adminText}>Welcome, Admin!</Text>
+      <Text style={styles.header}>Admin Dashboard</Text>
+      <Button title="View Patients" onPress={() => navigation.navigate("AdminViewPatients")} />
       <Button title="Add Guide" onPress={() => navigation.navigate("AddGuide")} />
       <Button title="Add Result" onPress={() => navigation.navigate("AddResult")} />
     </View>
   );
-}
+};
 
-// Kullanıcı Ana Sayfası
-function UserHome() {
+const UserHome = () => {
   return (
     <View style={styles.container}>
-      <Text style={styles.userText}>Welcome, User!</Text>
+      <Text style={styles.header}>Welcome, User!</Text>
     </View>
   );
-}
+};
 
-// Ana App Bileşeni
 export default function App() {
   const [role, setRole] = useState(null);
-  const [user, setUser] = useState(null);
 
   return (
     <NavigationContainer>
       <Stack.Navigator>
-        {/* Giriş ekranı */}
         <Stack.Screen name="Login">
-          {(props) => <LoginScreen {...props} setRole={setRole} setUser={setUser} />}
+          {(props) => <LoginScreen {...props} setRole={setRole} />}
         </Stack.Screen>
-
-        {/* Admin ekranları */}
         {role === "admin" && (
           <>
             <Stack.Screen name="AdminHome" component={AdminHome} />
+            <Stack.Screen name="AdminViewPatients" component={AdminViewPatientsScreen} />
             <Stack.Screen name="AddGuide" component={AddGuideScreen} />
             <Stack.Screen name="AddResult" component={AddResultScreen} />
+            <Stack.Screen name="PatientDetails" component={PatientDetailsScreen} />
           </>
         )}
-
-        {/* Kullanıcı ekranları */}
         {role === "user" && <Stack.Screen name="UserHome" component={UserHome} />}
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
 
-// Stil
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -154,14 +145,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     width: "80%",
   },
-  adminText: {
+  header: {
     fontSize: 20,
-    color: "blue",
     fontWeight: "bold",
-  },
-  userText: {
-    fontSize: 20,
-    color: "green",
-    fontWeight: "bold",
+    marginBottom: 10,
   },
 });
