@@ -10,6 +10,7 @@ import AdminViewPatientsScreen from "./screens/AdminViewPatientsScreen";
 import AddGuideScreen from "./screens/AddGuideScreen";
 import AddResultScreen from "./screens/AddResultScreen";
 import PatientDetailsScreen from "./screens/PatientDetailsScreen";
+import UserResultsScreen from "./screens/UserResultsScreen";
 
 // Firebase yapılandırması
 import { initializeApp } from "firebase/app";
@@ -34,8 +35,8 @@ const LoginScreen = ({ navigation, setRole }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (isLoading) return; // Çift tıklamayı önlemek için kontrol
-    setIsLoading(true); // Tıklama sırasında tekrar giriş yapılmasını engellemek için
+    if (isLoading) return;
+    setIsLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -55,7 +56,7 @@ const LoginScreen = ({ navigation, setRole }) => {
         } else if (role === "user") {
           navigation.reset({
             index: 0,
-            routes: [{ name: "UserHome" }],
+            routes: [{ name: "UserHome", params: { userId: user.uid } }],
           });
         }
       } else {
@@ -64,7 +65,7 @@ const LoginScreen = ({ navigation, setRole }) => {
     } catch (error) {
       alert("Login failed: " + error.message);
     } finally {
-      setIsLoading(false); // İşlem tamamlandı
+      setIsLoading(false);
     }
   };
 
@@ -99,10 +100,13 @@ const AdminHome = ({ navigation }) => {
   );
 };
 
-const UserHome = () => {
+const UserHome = ({ navigation, route }) => {
+  const { userId } = route.params;
+
   return (
     <View style={styles.container}>
       <Text style={styles.header}>Welcome, User!</Text>
+      <Button title="View My Results" onPress={() => navigation.navigate("UserResults", { userId })} />
     </View>
   );
 };
@@ -125,7 +129,12 @@ export default function App() {
             <Stack.Screen name="PatientDetails" component={PatientDetailsScreen} />
           </>
         )}
-        {role === "user" && <Stack.Screen name="UserHome" component={UserHome} />}
+        {role === "user" && (
+          <>
+            <Stack.Screen name="UserHome" component={UserHome} />
+            <Stack.Screen name="UserResults" component={UserResultsScreen} />
+          </>
+        )}
       </Stack.Navigator>
     </NavigationContainer>
   );

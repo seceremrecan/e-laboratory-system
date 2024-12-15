@@ -42,8 +42,9 @@ const PatientDetailsScreen = ({ route }) => {
     <ScrollView style={styles.container}>
       <Text style={styles.header}>Results for {name}</Text>
       {results.map((result, index) => {
+        const isLatest = index === 0; // En yeni sonuç
         const comparison =
-          index < results.length - 1
+          isLatest && results.length > 1
             ? keyOrder.map((key) => {
                 const prevValue = results[index + 1]?.values[key] || 0;
                 const currentValue = result.values[key] || 0;
@@ -54,7 +55,7 @@ const PatientDetailsScreen = ({ route }) => {
         return (
           <View key={result.date} style={styles.resultContainer}>
             <Text style={styles.date}>{result.date}</Text>
-            {comparison
+            {isLatest && comparison
               ? comparison.map(({ key, symbol, color, background, value }) => (
                   <View
                     key={key}
