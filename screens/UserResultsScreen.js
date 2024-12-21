@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, StyleSheet } from "react-native";
+import { View, Text, TextInput, ScrollView, StyleSheet, SafeAreaView } from "react-native";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 
 const UserResultsScreen = ({ route }) => {
@@ -9,54 +9,34 @@ const UserResultsScreen = ({ route }) => {
   const [results, setResults] = useState([]);
   const [userAge, setUserAge] = useState(null);
   const [guideData, setGuideData] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     const fetchUserData = async () => {
-      try {
-        const userDocRef = doc(db, "Users", userId);
-        const userDoc = await getDoc(userDocRef);
-
-        if (userDoc.exists()) {
-          setUserAge(userDoc.data().age);
-        } else {
-          console.error("User data not found!");
-        }
-      } catch (error) {
-        console.error("Error fetching user data:", error);
+      const userDocRef = doc(db, "Users", userId);
+      const userDoc = await getDoc(userDocRef);
+      if (userDoc.exists()) {
+        setUserAge(userDoc.data().age);
       }
     };
 
     const fetchResults = async () => {
-      try {
-        const resultsDocRef = doc(db, "Results", userId);
-        const resultsDoc = await getDoc(resultsDocRef);
-
-        if (resultsDoc.exists()) {
-          const data = resultsDoc.data();
-          const sortedResults = Object.keys(data)
-            .map((date) => ({ date, values: data[date] }))
-            .sort((a, b) => new Date(b.date) - new Date(a.date));
-          setResults(sortedResults);
-        } else {
-          console.error("Results not found!");
-        }
-      } catch (error) {
-        console.error("Error fetching results:", error);
+      const resultsDocRef = doc(db, "Results", userId);
+      const resultsDoc = await getDoc(resultsDocRef);
+      if (resultsDoc.exists()) {
+        const data = resultsDoc.data();
+        const sortedResults = Object.keys(data)
+          .map((date) => ({ date, values: data[date] }))
+          .sort((a, b) => new Date(b.date) - new Date(a.date));
+        setResults(sortedResults);
       }
     };
 
     const fetchGuideData = async () => {
-      try {
-        const guideDocRef = doc(db, "Guides", "TJMS"); // Örnek olarak "TJMS" kullanılıyor
-        const guideDoc = await getDoc(guideDocRef);
-
-        if (guideDoc.exists()) {
-          setGuideData(guideDoc.data());
-        } else {
-          console.error("Guide data not found!");
-        }
-      } catch (error) {
-        console.error("Error fetching guide data:", error);
+      const guideDocRef = doc(db, "Guides", "TJMS");
+      const guideDoc = await getDoc(guideDocRef);
+      if (guideDoc.exists()) {
+        setGuideData(guideDoc.data());
       }
     };
 
@@ -75,51 +55,94 @@ const UserResultsScreen = ({ route }) => {
 
     if (ageRange && guideData[ageRange][key]) {
       const [min, max] = guideData[ageRange][key];
-      if (value < min) {
-        return { backgroundColor: "#ffe6e6", arrow: "↓", arrowColor: "red" }; // Değer düşük
-      } else if (value > max) {
-        return { backgroundColor: "#ffe6e6", arrow: "↑", arrowColor: "red" }; // Değer yüksek
-      } else {
-        return { backgroundColor: "#e6ffe6" }; // Değer normal
-      }
+      if (value < min) return { backgroundColor: "#ffe6e6", arrow: "↓", arrowColor: "red" };
+      if (value > max) return { backgroundColor: "#ffe6e6", arrow: "↑", arrowColor: "red" };
+      return { backgroundColor: "#e6ffe6" };
     }
 
-    return { backgroundColor: "#fff" }; // Kılavuz bulunamadığında
+    return { backgroundColor: "#fff" };
   };
 
-  return (
-    <ScrollView style={styles.container}>
-      {results.map((result) => (
-        <View key={result.date} style={styles.resultContainer}>
-          <Text style={styles.date}>{result.date}</Text>
-          {Object.keys(result.values).map((key) => {
-            const evaluation = evaluateValue(key, result.values[key]);
+  const filteredResults = results.map((result) => ({
+    date: result.date,
+    filteredValues: Object.keys(result.values)
+      .filter((key) =>
+        searchQuery ? key.toLowerCase() === searchQuery.toLowerCase() : true
+      )
+      .reduce((acc, key) => {
+        acc[key] = result.values[key];
+        return acc;
+      }, {}),
+  }));
 
-            return (
-              <View key={key} style={[styles.resultRow, { backgroundColor: evaluation.backgroundColor }]}>
-                <Text style={styles.resultKey}>{key}:</Text>
-                <Text style={styles.resultValue}>
-                  {result.values[key]}{" "}
-                  {evaluation.arrow && (
-                    <Text style={{ color: evaluation.arrowColor, fontWeight: "bold" }}>
-                      {evaluation.arrow}
-                    </Text>
-                  )}
-                </Text>
+  return (
+    <SafeAreaView style={styles.safeContainer}>
+      <View style={styles.container}>
+        <TextInput
+          placeholder="Search by test value (e.g., IgA)"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          style={styles.searchInput}
+        />
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          {filteredResults.map((result) => (
+            Object.keys(result.filteredValues).length > 0 && (
+              <View key={result.date} style={styles.resultContainer}>
+                <Text style={styles.date}>{result.date}</Text>
+                {Object.entries(result.filteredValues).map(([key, value]) => {
+                  const evaluation = evaluateValue(key, value);
+                  return (
+                    <View
+                      key={key}
+                      style={[
+                        styles.resultRow,
+                        { backgroundColor: evaluation.backgroundColor },
+                      ]}
+                    >
+                      <Text style={styles.resultKey}>{key}:</Text>
+                      <Text style={styles.resultValue}>
+                        {value}{" "}
+                        {evaluation.arrow && (
+                          <Text
+                            style={{
+                              color: evaluation.arrowColor,
+                              fontWeight: "bold",
+                            }}
+                          >
+                            {evaluation.arrow}
+                          </Text>
+                        )}
+                      </Text>
+                    </View>
+                  );
+                })}
               </View>
-            );
-          })}
-        </View>
-      ))}
-    </ScrollView>
+            )
+          ))}
+        </ScrollView>
+      </View>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
+  safeContainer: {
     flex: 1,
     backgroundColor: "#f9f9f9",
+  },
+  container: {
+    flex: 1,
+  },
+  scrollContainer: {
+    flexGrow: 1,
     padding: 10,
+  },
+  searchInput: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    padding: 10,
+    marginBottom: 10,
+    width: "100%",
   },
   resultContainer: {
     marginBottom: 20,
