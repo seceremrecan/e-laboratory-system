@@ -1,10 +1,10 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet, ScrollView } from "react-native";
-import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
+import { View, Text, TextInput, Button, StyleSheet, ScrollView, Alert } from "react-native";
+import { getFirestore, doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
 
 const AddResultScreen = () => {
   const db = getFirestore();
-  const [userId, setUserId] = useState(""); // Hastanın UID'si
+  const [userId, setUserId] = useState(""); // Patient UID
   const [date, setDate] = useState(""); // YYYY-MM-DD
   const [results, setResults] = useState({
     IgA: "",
@@ -16,48 +16,51 @@ const AddResultScreen = () => {
     IgG4: "",
   });
 
+  const isValidDate = (dateString) => {
+    const regex = /^\d{4}-\d{2}-\d{2}$/; // YYYY-MM-DD format
+    if (!dateString.match(regex)) return false;
+    const dateObj = new Date(dateString);
+    return !isNaN(dateObj.getTime());
+  };
+
   const handleAddResult = async () => {
     try {
-      if (!userId || !date) {
-        alert("User ID and Date are required!");
+      if (!userId || !date || Object.values(results).some((value) => value === "")) {
+        Alert.alert("Error", "Please fill all fields, including User ID, Date, and Results.");
+        return;
+      }
+
+      if (!isValidDate(date)) {
+        Alert.alert("Error", "Please enter a valid date in the format YYYY-MM-DD.");
         return;
       }
 
       const docRef = doc(db, "Results", userId);
       const docSnapshot = await getDoc(docRef);
 
-      // Eğer doküman yoksa oluştur
       if (!docSnapshot.exists()) {
+        // Create a new document if it doesn't exist
         await setDoc(docRef, {
           [date]: {
-            IgA: parseFloat(results.IgA),
-            IgM: parseFloat(results.IgM),
-            IgG: parseFloat(results.IgG),
-            IgG1: parseFloat(results.IgG1),
-            IgG2: parseFloat(results.IgG2),
-            IgG3: parseFloat(results.IgG3),
-            IgG4: parseFloat(results.IgG4),
+            ...Object.fromEntries(
+              Object.entries(results).map(([key, value]) => [key, parseFloat(value)])
+            ),
           },
         });
       } else {
-        // Doküman varsa, mevcut dokümana yeni sonuçları ekle
+        // Update the existing document
         const existingData = docSnapshot.data();
-        await setDoc(docRef, {
-          ...existingData,
+        await updateDoc(docRef, {
           [date]: {
-            IgA: parseFloat(results.IgA),
-            IgM: parseFloat(results.IgM),
-            IgG: parseFloat(results.IgG),
-            IgG1: parseFloat(results.IgG1),
-            IgG2: parseFloat(results.IgG2),
-            IgG3: parseFloat(results.IgG3),
-            IgG4: parseFloat(results.IgG4),
+            ...Object.fromEntries(
+              Object.entries(results).map(([key, value]) => [key, parseFloat(value)])
+            ),
           },
         });
       }
 
-      alert("Result added successfully!");
-      // Formu sıfırla
+      Alert.alert("Success", "Result added successfully!");
+      // Reset form
       setUserId("");
       setDate("");
       setResults({
@@ -70,8 +73,8 @@ const AddResultScreen = () => {
         IgG4: "",
       });
     } catch (error) {
-      console.error("Error adding result: ", error.message);
-      alert("Failed to add result.");
+      console.error("Error adding result:", error.message);
+      Alert.alert("Error", "Failed to add result. Please try again.");
     }
   };
 
@@ -129,6 +132,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
     width: "80%",
+    borderRadius: 5,
   },
 });
 
