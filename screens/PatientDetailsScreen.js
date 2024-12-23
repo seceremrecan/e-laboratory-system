@@ -1,15 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView } from "react-native";
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+} from "react-native";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
 
-const PatientDetailsScreen = ({ route }) => {
+const PatientDetailsScreen = ({ route, navigation }) => {
   const { userId, name } = route.params;
   const db = getFirestore();
   const [results, setResults] = useState([]);
-
-  const keyOrder = ["IgA", "IgM", "IgG", "IgG1", "IgG2", "IgG3", "IgG4"]; // Sabit sıralama
+  const [age, setAge] = useState(null); // Yaş bilgisi için state ekliyoruz
 
   useEffect(() => {
+    // Sonuçları getir
     const fetchResults = async () => {
       try {
         const docRef = doc(db, "Results", userId);
@@ -18,10 +24,8 @@ const PatientDetailsScreen = ({ route }) => {
         if (docSnap.exists()) {
           const data = docSnap.data();
           const sortedResults = Object.keys(data)
-            .filter((key) => key !== "name")
             .map((date) => ({ date, values: data[date] }))
-            .sort((a, b) => new Date(b.date) - new Date(a.date)); // Tarihe göre sıralama
-
+            .sort((a, b) => new Date(b.date) - new Date(a.date)); // En yeni tarih en üste
           setResults(sortedResults);
         }
       } catch (error) {
@@ -29,7 +33,23 @@ const PatientDetailsScreen = ({ route }) => {
       }
     };
 
+    // Kullanıcı yaşını getir
+    const fetchUserAge = async () => {
+      try {
+        const userDocRef = doc(db, "Users", userId);
+        const userDoc = await getDoc(userDocRef);
+        if (userDoc.exists()) {
+          setAge(userDoc.data().age); // Yaşı state'e ata
+        } else {
+          console.error("User document not found!");
+        }
+      } catch (error) {
+        console.error("Error fetching user age:", error.message);
+      }
+    };
+
     fetchResults();
+    fetchUserAge();
   }, [userId]);
 
   const compareValues = (current, previous) => {
@@ -38,59 +58,69 @@ const PatientDetailsScreen = ({ route }) => {
     return { symbol: "→", color: "gray", background: "#f2f2f2" };
   };
 
-  return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.header}>Results for {name}</Text>
-      {results.map((result, index) => {
-        const isLatest = index === 0; // En yeni sonuç
-        const comparison =
-          isLatest && results.length > 1
-            ? keyOrder.map((key) => {
-                const prevValue = results[index + 1]?.values[key] || 0;
-                const currentValue = result.values[key] || 0;
-                return { key, ...compareValues(currentValue, prevValue), value: currentValue };
-              })
-            : null;
+  const renderComparison = (currentResult, prevResult) => {
+    if (!prevResult) return null;
 
-        return (
+    return Object.keys(currentResult).map((key) => {
+      const currentValue = currentResult[key];
+      const prevValue = prevResult[key] || 0;
+      const { symbol, color, background } = compareValues(currentValue, prevValue);
+
+      return (
+        <View key={key} style={[styles.resultRow, { backgroundColor: background }]}>
+          <Text style={styles.resultText}>
+            {key}: {currentValue}
+          </Text>
+          <Text style={[styles.arrow, { color }]}>{symbol}</Text>
+        </View>
+      );
+    });
+  };
+
+  return (
+    <View style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={styles.scrollViewContainer}>
+        <Text style={styles.header}>Results for {name}</Text>
+
+        {results.map((result, index) => (
           <View key={result.date} style={styles.resultContainer}>
             <Text style={styles.date}>{result.date}</Text>
-            {isLatest && comparison
-              ? comparison.map(({ key, symbol, color, background, value }) => (
-                  <View
-                    key={key}
-                    style={[styles.resultRow, { backgroundColor: background }]}
-                  >
-                    <Text style={styles.resultText}>
-                      {key}: {value}
-                    </Text>
-                    <Text style={[styles.arrow, { color }]}>{symbol}</Text>
-                  </View>
-                ))
-              : keyOrder.map((key) => (
+            {index === 0
+              ? renderComparison(result.values, results[index + 1]?.values)
+              : Object.keys(result.values).map((key) => (
                   <View key={key} style={styles.resultRow}>
                     <Text style={styles.resultText}>
-                      {key}: {result.values[key] || 0}
+                      {key}: {result.values[key]}
                     </Text>
                   </View>
                 ))}
           </View>
-        );
-      })}
-    </ScrollView>
+        ))}
+      </ScrollView>
+
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={styles.guideButton}
+          onPress={() =>
+            navigation.navigate("AdminGuideEvaluation", { userId, name, age }) // age gönderiliyor
+          }
+        >
+          <Text style={styles.buttonText}>Kılavuz Değerlendirme</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: {
-    flexGrow: 1,
+  scrollViewContainer: {
     padding: 20,
   },
   header: {
     fontSize: 24,
     fontWeight: "bold",
-    marginBottom: 20,
     textAlign: "center",
+    marginBottom: 20,
   },
   resultContainer: {
     marginBottom: 20,
@@ -115,7 +145,23 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   arrow: {
-    fontSize: 24,
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  buttonContainer: {
+    padding: 10,
+    borderTopWidth: 1,
+    borderColor: "#ccc",
+  },
+  guideButton: {
+    backgroundColor: "#007BFF",
+    padding: 15,
+    borderRadius: 10,
+    alignItems: "center",
+  },
+  buttonText: {
+    color: "#fff",
+    fontSize: 16,
     fontWeight: "bold",
   },
 });
