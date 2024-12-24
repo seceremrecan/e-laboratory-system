@@ -10,6 +10,7 @@ import AdminViewPatientsScreen from "./screens/AdminViewPatientsScreen";
 import AddGuideScreen from "./screens/AddGuideScreen";
 import AddResultScreen from "./screens/AddResultScreen";
 import PatientDetailsScreen from "./screens/PatientDetailsScreen";
+import AdminGuideEvaluationScreen from "./screens/AdminGuideEvaluationScreen";
 import UserResultsScreen from "./screens/UserResultsScreen";
 
 // Firebase yapılandırması
@@ -29,7 +30,7 @@ const Stack = createStackNavigator();
 const auth = getAuth();
 const db = getFirestore();
 
-const LoginScreen = ({ navigation, setRole }) => {
+const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -37,6 +38,7 @@ const LoginScreen = ({ navigation, setRole }) => {
   const handleLogin = async () => {
     if (isLoading) return;
     setIsLoading(true);
+
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
@@ -46,7 +48,6 @@ const LoginScreen = ({ navigation, setRole }) => {
 
       if (userDoc.exists()) {
         const role = userDoc.data().role;
-        setRole(role);
 
         if (role === "admin") {
           navigation.reset({
@@ -84,7 +85,11 @@ const LoginScreen = ({ navigation, setRole }) => {
         secureTextEntry
         style={styles.input}
       />
-      <Button title={isLoading ? "Logging in..." : "Login"} onPress={handleLogin} disabled={isLoading} />
+      <Button
+        title={isLoading ? "Logging in..." : "Login"}
+        onPress={handleLogin}
+        disabled={isLoading}
+      />
     </View>
   );
 };
@@ -112,29 +117,18 @@ const UserHome = ({ navigation, route }) => {
 };
 
 export default function App() {
-  const [role, setRole] = useState(null);
-
   return (
     <NavigationContainer>
-      <Stack.Navigator>
-        <Stack.Screen name="Login">
-          {(props) => <LoginScreen {...props} setRole={setRole} />}
-        </Stack.Screen>
-        {role === "admin" && (
-          <>
-            <Stack.Screen name="AdminHome" component={AdminHome} />
-            <Stack.Screen name="AdminViewPatients" component={AdminViewPatientsScreen} />
-            <Stack.Screen name="AddGuide" component={AddGuideScreen} />
-            <Stack.Screen name="AddResult" component={AddResultScreen} />
-            <Stack.Screen name="PatientDetails" component={PatientDetailsScreen} />
-          </>
-        )}
-        {role === "user" && (
-          <>
-            <Stack.Screen name="UserHome" component={UserHome} />
-            <Stack.Screen name="UserResults" component={UserResultsScreen} />
-          </>
-        )}
+      <Stack.Navigator initialRouteName="Login">
+        <Stack.Screen name="Login" component={LoginScreen} />
+        <Stack.Screen name="AdminHome" component={AdminHome} />
+        <Stack.Screen name="AdminViewPatients" component={AdminViewPatientsScreen} />
+        <Stack.Screen name="AddGuide" component={AddGuideScreen} />
+        <Stack.Screen name="AddResult" component={AddResultScreen} />
+        <Stack.Screen name="PatientDetails" component={PatientDetailsScreen} />
+        <Stack.Screen name="AdminGuideEvaluation" component={AdminGuideEvaluationScreen} />
+        <Stack.Screen name="UserHome" component={UserHome} />
+        <Stack.Screen name="UserResults" component={UserResultsScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

@@ -1,54 +1,78 @@
-import React, { useEffect, useState } from "react";
-import { View, Text, TextInput, ScrollView, StyleSheet, SafeAreaView } from "react-native";
-import { getFirestore, doc, getDoc } from "firebase/firestore";
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  SafeAreaView,
+} from "react-native";
+import { Picker } from "@react-native-picker/picker"; // Güncellenmiş import
+import { getFirestore, doc, getDoc, collection, getDocs } from "firebase/firestore";
 
-const UserResultsScreen = ({ route }) => {
-  const { userId } = route.params;
+const AdminGuideEvaluationScreen = ({ route }) => {
+  const { userId, name, age } = route.params;
   const db = getFirestore();
 
   const [results, setResults] = useState([]);
-  const [userAge, setUserAge] = useState(null);
+  const [guides, setGuides] = useState([]);
+  const [selectedGuide, setSelectedGuide] = useState(null);
   const [guideData, setGuideData] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    const fetchUserData = async () => {
-      const userDocRef = doc(db, "Users", userId);
-      const userDoc = await getDoc(userDocRef);
-      if (userDoc.exists()) {
-        setUserAge(userDoc.data().age);
-      }
-    };
-
     const fetchResults = async () => {
-      const resultsDocRef = doc(db, "Results", userId);
-      const resultsDoc = await getDoc(resultsDocRef);
-      if (resultsDoc.exists()) {
-        const data = resultsDoc.data();
-        const sortedResults = Object.keys(data)
-          .map((date) => ({ date, values: data[date] }))
-          .sort((a, b) => new Date(b.date) - new Date(a.date));
-        setResults(sortedResults);
+      try {
+        const resultsDocRef = doc(db, "Results", userId);
+        const resultsSnapshot = await getDoc(resultsDocRef);
+
+        if (resultsSnapshot.exists()) {
+          const data = resultsSnapshot.data();
+          const sortedResults = Object.keys(data)
+            .map((date) => ({ date, values: data[date] }))
+            .sort((a, b) => new Date(b.date) - new Date(a.date)); // Sort by date descending
+          setResults(sortedResults);
+        }
+      } catch (error) {
+        console.error("Error fetching results:", error.message);
       }
     };
 
-    const fetchGuideData = async () => {
-      const guideDocRef = doc(db, "Guides", "TJMS");
-      const guideDoc = await getDoc(guideDocRef);
-      if (guideDoc.exists()) {
-        setGuideData(guideDoc.data());
+    const fetchGuides = async () => {
+      try {
+        const guidesCollectionRef = collection(db, "Guides");
+        const guidesSnapshot = await getDocs(guidesCollectionRef);
+
+        const guidesList = [];
+        guidesSnapshot.forEach((doc) => {
+          guidesList.push({ id: doc.id, data: doc.data() });
+        });
+
+        setGuides(guidesList);
+
+        if (guidesList.length > 0) {
+          setSelectedGuide(guidesList[0].id); // Default selection
+          setGuideData(guidesList[0].data); // Load first guide data
+        }
+      } catch (error) {
+        console.error("Error fetching guides:", error.message);
       }
     };
 
-    fetchUserData();
     fetchResults();
-    fetchGuideData();
+    fetchGuides();
   }, [userId]);
+
+  const handleGuideChange = (guideId) => {
+    setSelectedGuide(guideId);
+    const selectedGuideData = guides.find((guide) => guide.id === guideId)?.data;
+    setGuideData(selectedGuideData);
+  };
 
   const determineAgeRange = (age) => {
     if (!guideData) return null;
 
-    const roundedAge = Math.ceil(age); // Kullanıcının yaşını yuvarla
+    const roundedAge = Math.ceil(age); // Round age up
     const ageRange = Object.keys(guideData).find((range) => {
       const [minAge, maxAge] = range.split("-").map(Number);
       return roundedAge >= minAge && roundedAge < maxAge;
@@ -58,9 +82,9 @@ const UserResultsScreen = ({ route }) => {
   };
 
   const evaluateValue = (key, value) => {
-    if (!guideData || !userAge) return { backgroundColor: "#fff" };
+    if (!guideData || !age) return { backgroundColor: "#fff" };
 
-    const ageRange = determineAgeRange(userAge);
+    const ageRange = determineAgeRange(age);
 
     if (ageRange && guideData[ageRange]?.[key]) {
       const [min, max] = guideData[ageRange][key];
@@ -87,12 +111,24 @@ const UserResultsScreen = ({ route }) => {
   return (
     <SafeAreaView style={styles.safeContainer}>
       <View style={styles.container}>
+        {/* Guide Picker */}
+        <Picker
+          selectedValue={selectedGuide}
+          onValueChange={handleGuideChange}
+          style={styles.picker}
+        >
+          {guides.map((guide) => (
+            <Picker.Item key={guide.id} label={guide.id} value={guide.id} />
+          ))}
+        </Picker>
+
         <TextInput
           placeholder="Search by test value (e.g., IgA)"
           value={searchQuery}
           onChangeText={setSearchQuery}
           style={styles.searchInput}
         />
+
         <ScrollView contentContainerStyle={styles.scrollContainer}>
           {filteredResults.map((result) => (
             Object.keys(result.filteredValues).length > 0 && (
@@ -150,6 +186,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     width: "100%",
   },
+  picker: {
+    height: 50,
+    width: "100%",
+    marginBottom: 10,
+  },
   resultContainer: {
     marginBottom: 20,
     padding: 10,
@@ -179,4 +220,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default UserResultsScreen;
+export default AdminGuideEvaluationScreen;
