@@ -20,6 +20,9 @@ const AdminGuideEvaluationScreen = ({ route }) => {
   const [guideData, setGuideData] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Sabit bir anahtar sırası
+  const keyOrder = ["IgA", "IgM", "IgG", "IgG1", "IgG2", "IgG3", "IgG4"];
+
   useEffect(() => {
     const fetchResults = async () => {
       try {
@@ -98,14 +101,12 @@ const AdminGuideEvaluationScreen = ({ route }) => {
 
   const filteredResults = results.map((result) => ({
     date: result.date,
-    filteredValues: Object.keys(result.values)
-      .filter((key) =>
-        searchQuery ? key.toLowerCase() === searchQuery.toLowerCase() : true
-      )
-      .reduce((acc, key) => {
-        acc[key] = result.values[key];
-        return acc;
-      }, {}),
+    filteredValues: keyOrder.reduce((acc, key) => {
+      if (!searchQuery || key.toLowerCase() === searchQuery.toLowerCase()) {
+        acc[key] = result.values[key] || "-";
+      }
+      return acc;
+    }, {}),
   }));
 
   return (
@@ -134,7 +135,8 @@ const AdminGuideEvaluationScreen = ({ route }) => {
             Object.keys(result.filteredValues).length > 0 && (
               <View key={result.date} style={styles.resultContainer}>
                 <Text style={styles.date}>{result.date}</Text>
-                {Object.entries(result.filteredValues).map(([key, value]) => {
+                {keyOrder.map((key) => {
+                  const value = result.filteredValues[key];
                   const evaluation = evaluateValue(key, value);
                   return (
                     <View

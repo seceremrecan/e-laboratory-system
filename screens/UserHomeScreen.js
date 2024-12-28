@@ -1,41 +1,31 @@
 import React from "react";
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView } from "react-native";
 
-const AdminHomeScreen = ({ navigation }) => {
+const UserHomeScreen = ({ navigation, route }) => {
+  const { userId } = route.params;
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.header}>Hoşgeldiniz</Text>
-      <Text style={styles.cardTitle}>Lütfen yapmak istediğiniz işlemi seçin.</Text>
-
+      <Text style={styles.header}>Kullanıcı Paneli</Text>
 
       <View style={styles.cardContainer}>
         <TouchableOpacity
           style={styles.card}
-          onPress={() => navigation.navigate("AdminViewPatients")}
+          onPress={() => navigation.navigate("UserResults", { userId })}
         >
-          <Text style={styles.cardTitle}>Hastalar</Text>
+          <Text style={styles.cardTitle}>Tahlil Sonuçlarım</Text>
           <Text style={styles.cardDescription}>
-            Hastalar ve sonuçları hakkında bilgi alın.
+            Tahlil sonuçlarınızı görüntüleyin ve değerlendirin.
           </Text>
         </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.card}
-          onPress={() => navigation.navigate("AddGuide")}
+          onPress={() => navigation.navigate("UserProfile", { userId })}
         >
-          <Text style={styles.cardTitle}>Kılavuzlar</Text>
+          <Text style={styles.cardTitle}>Profilim</Text>
           <Text style={styles.cardDescription}>
-            Değerlendirmeler için tıbbi rehberler oluşturun.
-          </Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.card}
-          onPress={() => navigation.navigate("AddResult")}
-        >
-          <Text style={styles.cardTitle}>Tahlil</Text>
-          <Text style={styles.cardDescription}>
-            Bir hastanın tahlil sonuçlarını ekleyin.
+            Kişisel bilgilerinizi görüntüleyin ve düzenleyin.
           </Text>
         </TouchableOpacity>
       </View>
@@ -84,4 +74,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default AdminHomeScreen;
+export default UserHomeScreen;
