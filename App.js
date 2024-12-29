@@ -22,6 +22,7 @@ import UserResultsScreen from "./screens/UserResultsScreen";
 import AdminHomeScreen from "./screens/AdminHomeScreen";
 import UserProfileScreen from "./screens/UserProfileScreen";
 import UserHomeScreen from "./screens/UserHomeScreen";
+import RegisterScreen from "./screens/RegisterScreen";
 
 // Firebase yapılandırması
 import { initializeApp } from "firebase/app";
@@ -50,11 +51,7 @@ const LoginScreen = ({ navigation, setUserName }) => {
     setIsLoading(true);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password
-      );
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
       const userDocRef = doc(db, "Users", user.uid);
@@ -62,7 +59,9 @@ const LoginScreen = ({ navigation, setUserName }) => {
 
       if (userDoc.exists()) {
         const role = userDoc.data().role;
-        setUserName(userDoc.data().name); // Kullanıcı adını ayarla
+        const userName = userDoc.data().name || "User";
+
+        setUserName(userName);
 
         if (role === "admin") {
           navigation.reset({
@@ -87,7 +86,7 @@ const LoginScreen = ({ navigation, setUserName }) => {
 
   return (
     <View style={styles.loginContainer}>
-      <Text style={styles.loginHeader}>E-Laboratuvar Sistemi</Text>
+      <Text style={styles.loginHeader}>Giriş Yap</Text>
       <TextInput
         placeholder="Email"
         value={email}
@@ -110,19 +109,25 @@ const LoginScreen = ({ navigation, setUserName }) => {
           {isLoading ? "Giriş Yapılıyor..." : "Giriş Yap"}
         </Text>
       </TouchableOpacity>
+      <TouchableOpacity
+        style={[styles.loginButton, { backgroundColor: "#6c757d" }]}
+        onPress={() => navigation.navigate("Register")}
+      >
+        <Text style={styles.loginButtonText}>Kayıt Ol</Text>
+      </TouchableOpacity>
     </View>
   );
 };
 
 export default function App() {
-  const [userName, setUserName] = useState(""); // Kullanıcı adını saklamak için state
+  const [userName, setUserName] = useState("");
 
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Login">
         <Stack.Screen
           name="Login"
-          options={{ title: "Giriş Yap" }}
+          options={{ title: "Giriş Yap", headerShown: false }}
         >
           {(props) => <LoginScreen {...props} setUserName={setUserName} />}
         </Stack.Screen>
@@ -175,6 +180,7 @@ export default function App() {
         <Stack.Screen name="AdminGuideEvaluation" component={AdminGuideEvaluationScreen} />
         <Stack.Screen name="UserResults" component={UserResultsScreen} />
         <Stack.Screen name="UserProfile" component={UserProfileScreen} />
+        <Stack.Screen name="Register" component={RegisterScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
@@ -209,6 +215,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     width: "80%",
     alignItems: "center",
+    marginBottom: 10,
   },
   loginButtonText: {
     color: "#fff",

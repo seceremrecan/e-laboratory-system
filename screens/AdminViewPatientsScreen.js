@@ -1,5 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { View, TextInput, FlatList, TouchableOpacity, Text, StyleSheet } from "react-native";
+import {
+  View,
+  TextInput,
+  FlatList,
+  TouchableOpacity,
+  Text,
+  StyleSheet,
+} from "react-native";
 import { getFirestore, collection, getDocs } from "firebase/firestore";
 
 const AdminViewPatientsScreen = ({ navigation }) => {
@@ -24,11 +31,24 @@ const AdminViewPatientsScreen = ({ navigation }) => {
     patient.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  useEffect(() => {
+    navigation.setOptions({
+      headerRight: () => (
+        <TouchableOpacity
+          style={styles.registerButton}
+          onPress={() => navigation.navigate("Register")} // "Register" adıyla eşleşiyor
+        >
+          <Text style={styles.registerButtonText}>Hasta Kayıt</Text>
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation]);
+
   return (
     <View style={styles.container}>
       <TextInput
         style={styles.searchInput}
-        placeholder="Search by patient name..."
+        placeholder="Hasta adı arayın..."
         value={searchQuery}
         onChangeText={setSearchQuery}
       />
@@ -40,8 +60,8 @@ const AdminViewPatientsScreen = ({ navigation }) => {
             style={styles.patientItem}
             onPress={() =>
               navigation.navigate("PatientDetails", {
-                userId: item.id, // Hastanın UID'si
-                name: item.name, // Hastanın adı
+                userId: item.id,
+                name: item.name,
               })
             }
           >
@@ -82,6 +102,17 @@ const styles = StyleSheet.create({
   patientEmail: {
     fontSize: 14,
     color: "#555",
+  },
+  registerButton: {
+    marginRight: 10,
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    backgroundColor: "#007bff",
+    borderRadius: 5,
+  },
+  registerButtonText: {
+    color: "#fff",
+    fontWeight: "bold",
   },
 });
 
