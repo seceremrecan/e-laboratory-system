@@ -1,6 +1,15 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet, ScrollView, Alert } from "react-native";
-import { getFirestore, doc, getDoc, updateDoc, setDoc } from "firebase/firestore";
+import React, { useState, useEffect } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  StyleSheet,
+  ScrollView,
+  Alert,
+} from "react-native";
+import { Picker } from "@react-native-picker/picker"; 
+import { getFirestore, collection, getDocs, doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
 
 const AddResultScreen = () => {
   const db = getFirestore();
@@ -15,6 +24,29 @@ const AddResultScreen = () => {
     IgG3: "",
     IgG4: "",
   });
+
+  const [users, setUsers] = useState([]); // Kullanıcılar
+  const [selectedUserName, setSelectedUserName] = useState(""); // Seçilen kullanıcı ismi
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "Users"));
+        const usersList = querySnapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .filter((user) => user.role === "user"); // Sadece role "user" olanları getir
+        setUsers(usersList);
+      } catch (error) {
+        console.error("Error fetching users:", error.message);
+        Alert.alert("Error", "Failed to fetch users.");
+      }
+    };
+
+    fetchUsers();
+  }, []);
 
   const isValidDate = (dateString) => {
     const regex = /^\d{4}-\d{2}-\d{2}$/; // YYYY-MM-DD format
@@ -59,7 +91,7 @@ const AddResultScreen = () => {
         });
       }
 
-      Alert.alert("Success", "Result added successfully!");
+      Alert.alert("Başarılı", "Tahlil başarıyla eklendi!");
       // Reset form
       setUserId("");
       setDate("");
@@ -78,22 +110,47 @@ const AddResultScreen = () => {
     }
   };
 
+  const handleUserSelection = (userName) => {
+    setSelectedUserName(userName);
+    const selectedUser = users.find((user) => user.name === userName);
+    if (selectedUser) {
+      setUserId(selectedUser.id);
+    }
+  };
+
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Text style={styles.header}>Add Result (Admin Only)</Text>
-      <TextInput
-        placeholder="User ID (Document ID)"
+      <Text style={styles.header}>Tahlil Ekle</Text>
+
+      {/* Kullanıcı Seçimi */}
+      <Text style={styles.subHeader}>Hasta Seç</Text>
+      <Picker
+        selectedValue={selectedUserName}
+        onValueChange={(itemValue) => handleUserSelection(itemValue)}
+        style={styles.picker}
+      >
+        <Picker.Item label="Hasta Seçin" value="" />
+        {users.map((user) => (
+          <Picker.Item key={user.id} label={user.name} value={user.name} />
+        ))}
+      </Picker>
+
+      {/* User ID */}
+        <TextInput
+        placeholder="User ID (Hasta seçildiğinde otomatik doldurulur.)"
         value={userId}
         onChangeText={setUserId}
         style={styles.input}
-      />
+        editable={false}
+       />
+
       <TextInput
-        placeholder="Date (YYYY-MM-DD)"
+        placeholder="Tahlil Tarihi (Yıl-Ay-Gün)"
         value={date}
         onChangeText={setDate}
         style={styles.input}
       />
-      <Text style={styles.subHeader}>Enter Test Results:</Text>
+      <Text style={styles.subHeader}>Tahlil Değerleri</Text>
       {Object.keys(results).map((key) => (
         <TextInput
           key={key}
@@ -104,7 +161,7 @@ const AddResultScreen = () => {
           keyboardType="numeric"
         />
       ))}
-      <Button title="Add Result" onPress={handleAddResult} />
+      <Button title="Tahlili Ekle" onPress={handleAddResult} />
     </ScrollView>
   );
 };
@@ -133,6 +190,11 @@ const styles = StyleSheet.create({
     marginBottom: 10,
     width: "80%",
     borderRadius: 5,
+  },
+  picker: {
+    width: "80%",
+    height: 50,
+    marginBottom: 20,
   },
 });
 

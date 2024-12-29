@@ -23,9 +23,9 @@ const AdminHomeScreen = ({ navigation }) => {
           style={styles.card}
           onPress={() => navigation.navigate("AddGuide")}
         >
-          <Text style={styles.cardTitle}>Kılavuzlar</Text>
+          <Text style={styles.cardTitle}>Kılavuz Ekleme ve Değerlendirme</Text>
           <Text style={styles.cardDescription}>
-            Değerlendirmeler için tıbbi rehberler oluşturun.
+            Değerlendirmeler için tıbbi kılavuzları ekleyin ve örnek tahlil sonuçlarını bu kılavuzlara göre değerlendirin.
           </Text>
         </TouchableOpacity>
 
@@ -33,7 +33,7 @@ const AdminHomeScreen = ({ navigation }) => {
           style={styles.card}
           onPress={() => navigation.navigate("AddResult")}
         >
-          <Text style={styles.cardTitle}>Tahlil</Text>
+          <Text style={styles.cardTitle}>Tahlil Ekle</Text>
           <Text style={styles.cardDescription}>
             Bir hastanın tahlil sonuçlarını ekleyin.
           </Text>

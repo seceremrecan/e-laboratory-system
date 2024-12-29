@@ -111,15 +111,17 @@ const PatientDetailsScreen = ({ route, navigation }) => {
         {results.map((result, index) => (
           <View key={result.date} style={styles.resultContainer}>
             <Text style={styles.date}>{result.date}</Text>
-            {index === 0
-              ? renderComparison(result.values, results[index + 1]?.values)
-              : keyOrder.map((key) => (
+            {results.length === 1 || index > 0
+              ? // Eğer yalnızca bir tahlil varsa veya bu birden sonraki tahlilse
+                keyOrder.map((key) => (
                   <View key={key} style={styles.resultRow}>
                     <Text style={styles.resultText}>
                       {key}: {result.values[key] || "-"}
                     </Text>
                   </View>
-                ))}
+                ))
+              : // Eğer bu ilk tahlilse ve kıyas yapılacak veri varsa
+                renderComparison(result.values, results[index + 1]?.values)}
           </View>
         ))}
       </ScrollView>
