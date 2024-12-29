@@ -1,9 +1,16 @@
 import React, { useState } from "react";
-import { View, Text, TextInput, Button, StyleSheet } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  StyleSheet,
+} from "react-native";
 import { NavigationContainer } from "@react-navigation/native";
 import { createStackNavigator } from "@react-navigation/stack";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, doc, getDoc } from "firebase/firestore";
+import { Ionicons } from "@expo/vector-icons";
 
 // Diğer ekranlar
 import AdminViewPatientsScreen from "./screens/AdminViewPatientsScreen";
@@ -12,6 +19,9 @@ import AddResultScreen from "./screens/AddResultScreen";
 import PatientDetailsScreen from "./screens/PatientDetailsScreen";
 import AdminGuideEvaluationScreen from "./screens/AdminGuideEvaluationScreen";
 import UserResultsScreen from "./screens/UserResultsScreen";
+import AdminHomeScreen from "./screens/AdminHomeScreen";
+import UserProfileScreen from "./screens/UserProfileScreen";
+import UserHomeScreen from "./screens/UserHomeScreen";
 
 // Firebase yapılandırması
 import { initializeApp } from "firebase/app";
@@ -30,7 +40,7 @@ const Stack = createStackNavigator();
 const auth = getAuth();
 const db = getFirestore();
 
-const LoginScreen = ({ navigation }) => {
+const LoginScreen = ({ navigation, setUserName }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -40,7 +50,11 @@ const LoginScreen = ({ navigation }) => {
     setIsLoading(true);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
 
       const userDocRef = doc(db, "Users", user.uid);
@@ -48,6 +62,7 @@ const LoginScreen = ({ navigation }) => {
 
       if (userDoc.exists()) {
         const role = userDoc.data().role;
+        setUserName(userDoc.data().name); // Kullanıcı adını ayarla
 
         if (role === "admin") {
           navigation.reset({
@@ -71,7 +86,8 @@ const LoginScreen = ({ navigation }) => {
   };
 
   return (
-    <View style={styles.container}>
+    <View style={styles.loginContainer}>
+      <Text style={styles.loginHeader}>E-Laboratuvar Sistemi</Text>
       <TextInput
         placeholder="Email"
         value={email}
@@ -79,78 +95,124 @@ const LoginScreen = ({ navigation }) => {
         style={styles.input}
       />
       <TextInput
-        placeholder="Password"
+        placeholder="Şifre"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
         style={styles.input}
       />
-      <Button
-        title={isLoading ? "Logging in..." : "Login"}
+      <TouchableOpacity
+        style={styles.loginButton}
         onPress={handleLogin}
         disabled={isLoading}
-      />
-    </View>
-  );
-};
-
-const AdminHome = ({ navigation }) => {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Admin Dashboard</Text>
-      <Button title="View Patients" onPress={() => navigation.navigate("AdminViewPatients")} />
-      <Button title="Add Guide" onPress={() => navigation.navigate("AddGuide")} />
-      <Button title="Add Result" onPress={() => navigation.navigate("AddResult")} />
-    </View>
-  );
-};
-
-const UserHome = ({ navigation, route }) => {
-  const { userId } = route.params;
-
-  return (
-    <View style={styles.container}>
-      <Text style={styles.header}>Welcome, User!</Text>
-      <Button title="View My Results" onPress={() => navigation.navigate("UserResults", { userId })} />
+      >
+        <Text style={styles.loginButtonText}>
+          {isLoading ? "Giriş Yapılıyor..." : "Giriş Yap"}
+        </Text>
+      </TouchableOpacity>
     </View>
   );
 };
 
 export default function App() {
+  const [userName, setUserName] = useState(""); // Kullanıcı adını saklamak için state
+
   return (
     <NavigationContainer>
       <Stack.Navigator initialRouteName="Login">
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="AdminHome" component={AdminHome} />
+        <Stack.Screen
+          name="Login"
+          options={{ title: "Giriş Yap" }}
+        >
+          {(props) => <LoginScreen {...props} setUserName={setUserName} />}
+        </Stack.Screen>
+        <Stack.Screen
+          name="AdminHome"
+          component={AdminHomeScreen}
+          options={({ navigation }) => ({
+            title: "",
+            headerRight: () => (
+              <Text style={{ marginRight: 15, fontWeight: "bold", color: "gray" }}>
+                {userName}
+              </Text>
+            ),
+            headerLeft: () => (
+              <TouchableOpacity
+                style={{ marginLeft: 10, flexDirection: "row", alignItems: "center" }}
+                onPress={() => navigation.reset({ index: 0, routes: [{ name: "Login" }] })}
+              >
+                <Ionicons name="log-out-outline" size={24} color="#007BFF" />
+                <Text style={{ color: "#007BFF", fontSize: 16, marginLeft: 5 }}>Çıkış</Text>
+              </TouchableOpacity>
+            ),
+          })}
+        />
+        <Stack.Screen
+          name="UserHome"
+          component={UserHomeScreen}
+          options={({ navigation }) => ({
+            title: "",
+            headerRight: () => (
+              <Text style={{ marginRight: 15, fontWeight: "bold", color: "gray" }}>
+                {userName}
+              </Text>
+            ),
+            headerLeft: () => (
+              <TouchableOpacity
+                style={{ marginLeft: 10, flexDirection: "row", alignItems: "center" }}
+                onPress={() => navigation.reset({ index: 0, routes: [{ name: "Login" }] })}
+              >
+                <Ionicons name="log-out-outline" size={24} color="#007BFF" />
+                <Text style={{ color: "#007BFF", fontSize: 16, marginLeft: 5 }}>Çıkış</Text>
+              </TouchableOpacity>
+            ),
+          })}
+        />
         <Stack.Screen name="AdminViewPatients" component={AdminViewPatientsScreen} />
         <Stack.Screen name="AddGuide" component={AddGuideScreen} />
         <Stack.Screen name="AddResult" component={AddResultScreen} />
         <Stack.Screen name="PatientDetails" component={PatientDetailsScreen} />
         <Stack.Screen name="AdminGuideEvaluation" component={AdminGuideEvaluationScreen} />
-        <Stack.Screen name="UserHome" component={UserHome} />
         <Stack.Screen name="UserResults" component={UserResultsScreen} />
+        <Stack.Screen name="UserProfile" component={UserProfileScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  loginContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    backgroundColor: "#f3f4f6",
     padding: 20,
+  },
+  loginHeader: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#333",
+    marginBottom: 20,
   },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
     padding: 10,
-    marginBottom: 10,
+    marginBottom: 15,
     width: "80%",
+    borderRadius: 8,
+    backgroundColor: "#fff",
   },
-  header: {
-    fontSize: 20,
+  loginButton: {
+    backgroundColor: "#007BFF",
+    padding: 15,
+    borderRadius: 8,
+    width: "80%",
+    alignItems: "center",
+  },
+  loginButtonText: {
+    color: "#fff",
+    fontSize: 16,
     fontWeight: "bold",
-    marginBottom: 10,
   },
 });
