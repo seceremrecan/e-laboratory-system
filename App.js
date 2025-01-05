@@ -27,13 +27,13 @@ import RegisterScreen from "./screens/RegisterScreen";
 // Firebase yapılandırması
 import { initializeApp } from "firebase/app";
 const firebaseConfig = {
-  apiKey: "AIzaSyCY4YWyZfitmebC_p61n72bp4rToODcGYI",
-  authDomain: "e-laboratory-mobile-project.firebaseapp.com",
-  projectId: "e-laboratory-mobile-project",
-  storageBucket: "e-laboratory-mobile-project.appspot.com",
-  messagingSenderId: "632177386698",
-  appId: "1:632177386698:web:14e06884b766e52c9cc033",
-  measurementId: "G-RNXNZR2GVF",
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: "",
+  measurementId: "",
 };
 initializeApp(firebaseConfig);
 
